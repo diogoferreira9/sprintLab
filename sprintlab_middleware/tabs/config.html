@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuração do Projeto GitLab</title>
+  <script src="https://res.cdn.office.net/teams-js/2.12.0/js/MicrosoftTeams.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    :root {
+      --teams-purple: #8B88F8;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1b1d1f;
+      color: #f0f0f0;
+      margin: 25px;
+      animation: fadeIn 0.6s ease-in;
+      max-height: 100vh;
+      overflow: hidden;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      font-size: 1.5em;
+      color: var(--teams-purple);
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      font-weight: 500;
+    }
+
+    input {
+      width: 70%;
+      padding: 10px;
+      margin-top: 6px;
+      background-color: #2e2f31;
+      border: 1px solid #444;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--teams-purple);
+      background-color: #353739;
+    }
+
+    input::placeholder {
+      color: #aaa;
+      font-style: italic;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 25px;
+      background-color: var(--teams-purple);
+      color: #1b1d1f;
+      border: none;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    button:hover {
+      background-color: #736ff3;
+    }
+
+    #status {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #ff8080;
+    }
+
+    .form-icon {
+      margin-right: 6px;
+      color: var(--teams-purple);
+    }
+  </style>
+</head>
+<body>
+  <h2><i class="fab fa-gitlab form-icon"></i>Gitlab Project Configuration</h2>
+
+  <form id="config-form">
+    <label><i class="fas fa-link form-icon"></i>Gitlab URL</label>
+    <input type="text" id="host" placeholder="ex: gitlab.com" required>
+
+    <label><i class="fas fa-hashtag form-icon"></i>Project ID</label>
+    <input type="text" id="projectId" placeholder="ex: 123456" required>
+
+    <label><i class="fas fa-key form-icon"></i>Project Access Token</label>
+    <input type="password" id="projectToken" placeholder="ex: glpat-xxxxxxxxxxxxxxxx" required>
+
+    <button type="submit"><i class="fas fa-save"></i> Save Configuration</button>
+  </form>
+
+  <p id="status"></p>
+
+  <script>
+    let teamId, channelId;
+
+    microsoftTeams.app.initialize().then(() => {
+      microsoftTeams.pages.config.setValidityState(false);
+
+      microsoftTeams.app.getContext().then(context => {
+        teamId = context.team?.groupId || context.groupId;
+        channelId = context.channel?.id;
+        console.log("Contexto Teams:", { teamId, channelId });
+      });
+
+      microsoftTeams.pages.config.registerOnSaveHandler((saveEvent) => {
+        microsoftTeams.pages.config.setConfig({
+          entityId: "Sprintlab",
+          contentUrl: "https://sprintlab-middleware.fly.dev/tabs/main.html",
+          websiteUrl: "https://sprintlab-middleware.fly.dev/tabs/main.html",
+          suggestedDisplayName: "Sprintlab"
+        }).then(() => {
+          saveEvent.notifySuccess();
+        }).catch(err => {
+          console.error("Erro ao salvar a config da tab:", err);
+          saveEvent.notifyFailure("Erro ao configurar a aba.");
+        });
+      });
+    });
+
+    document.getElementById("config-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const body = {
+        teamId,
+        channelId,
+        host: document.getElementById("host").value,
+        projectId: document.getElementById("projectId").value,
+        token: document.getElementById("projectToken").value
+      };
+
+      try {
+        const res = await fetch("/configure-project", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        const status = document.getElementById("status");
+
+        if (res.ok) {
+          status.style.color = "#90ee90";
+          status.textContent = data.message || "Configuração feita com sucesso!";
+          microsoftTeams.pages.config.setValidityState(true);
+        } else {
+          status.style.color = "#ff8080";
+          status.textContent = data.message || "Erro ao guardar a configuração.";
+          microsoftTeams.pages.config.setValidityState(false);
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").textContent = "Erro ao salvar configuração.";
+        microsoftTeams.pages.config.setValidityState(false);
+      }
+    });
+  </script>
+</body>
+</html>

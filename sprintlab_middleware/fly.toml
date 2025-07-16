@@ -1,0 +1,26 @@
+# fly.toml app configuration file generated for sprintlab-middleware on 2025-03-05T04:38:32Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'sprintlab-middleware'
+primary_region = 'cdg'
+
+[build]
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[env]
+  PORT = "3000"
+  GITLAB_URL = "https://gitlab.com/api/v4"

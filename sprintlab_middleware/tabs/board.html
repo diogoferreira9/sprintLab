@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Board - GitLab Issues</title>
+  <script src="https://res.cdn.office.net/teams-js/2.12.0/js/MicrosoftTeams.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  
+  <style>
+    :root {
+      --teams-purple: #8B88F8;
+    }
+    html, body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1b1d1f;
+      color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .board-header {
+      padding: 10px 20px; /* antes: 25px */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #1b1d1f;
+      z-index: 2;
+    }
+    .board {
+      flex: 1;
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 15px 20px; /* antes: 25px */
+      box-sizing: border-box;
+    }  
+    .column {
+      width: 300px;
+      background-color: #2e2f31;
+      border-radius: 6px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 70px); 
+    } 
+    .column h3 {
+      text-align: center;
+      color: #fff;
+      margin: 10px 0;
+    }
+
+    .column-content {
+      overflow-y: auto;
+      padding: 10px;
+      flex-grow: 1;
+      min-height: 0; 
+    } 
+    .issue {
+      background-color: #1b1d1f;
+      border-radius: 5px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      max-height: 170px;
+      overflow: hidden;
+    }
+    .issue h4 {
+      margin: 0 0 5px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #f0f0f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .issue p {
+      font-size: 12px;
+      color: #ccc;
+      margin: 0;
+      display: -webkit-box;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .issue-heading {
+      font-size: 18px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 16px;
+      padding-left: 2px;
+    }
+    .editable-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 16px;
+      padding-left: 2px;
+      display: flex;
+      align-items: center;
+    }
+
+    .title-inline-edit {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      flex-grow: 1;
+      outline: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .title-inline-edit::placeholder {
+      color: #777;
+    }
+
+    .title-inline-edit:focus {
+      border-bottom: 1px solid var(--teams-purple);
+    }
+    #edit-title-display {
+      border: none;
+      background: none;
+      outline: none;
+    }
+    .meta {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 6px;
+      line-height: 1.2;
+    }
+    .label {
+      display: inline-block;
+      background-color: var(--teams-purple);
+      color: #fff;
+      border-radius: 3px;
+      padding: 2px 5px;
+      font-size: 10px;
+      margin: 2px 3px 0 0;
+      white-space: nowrap;
+    }
+  
+    /* Scrollbar estilo GitLab */
+    .board::-webkit-scrollbar,
+    .column-content::-webkit-scrollbar {
+      height: 8px;
+      width: 6px;
+    }
+    .board::-webkit-scrollbar-thumb,
+    .column-content::-webkit-scrollbar-thumb {
+      background: #5a5a5a;
+      border-radius: 4px;
+    }
+    .board::-webkit-scrollbar-track,
+    .column-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .board:hover::-webkit-scrollbar-thumb,
+    .column-content:hover::-webkit-scrollbar-thumb {
+      background: #8B88F8;
+    }
+    /* Firefox */
+    .board, .column-content {
+      scrollbar-width: thin;
+      scrollbar-color: #8B88F8 transparent;
+    }
+    select {
+      background-color: #2e2f31;
+      color: #f0f0f0;
+      border: 1px solid var(--teams-purple);
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%23f0f0f0' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 12px;
+      padding-right: 30px;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    select:hover {
+      border-color: #a29bfe;
+    }
+    select:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(139, 136, 248, 0.4);
+    }
+    /* editar issues */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center; 
+      padding: 0 16px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .modal-content {
+      margin-top: 60px; 
+      background: #2e2f31;
+      padding: 24px 30px;
+      border-radius: 10px;
+      width: 700px; 
+      max-width: 95vw; 
+      max-height: 90vh; 
+      overflow-y: visible; 
+      box-shadow: 0 8px 22px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 6px; 
+      margin-bottom: 8px;
+    }
+
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select,
+    .dropdown {
+      width: 100%;
+      box-sizing: border-box;
+      background: #1f2124;
+      color: #f0f0f0;
+      border: 1px solid #3c3f44;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .modal-content textarea {
+      min-height: 60px; /* antes: 90px */
+      max-height: 60px;
+      resize: none; /* opcional: evita que o user aumente */      
+    }
+
+    .modal-content input:focus,
+    .modal-content textarea:focus,
+    .modal-content select:focus {
+      border-color: var(--teams-purple);
+      box-shadow: 0 0 0 2px rgba(139, 136, 248, 0.4);
+      outline: none;
+    }
+
+    .modal-content input:hover,
+    .modal-content textarea:hover,
+    .modal-content select:hover {
+      border-color: var(--teams-purple);
+      box-shadow: 0 0 0 2px rgba(139, 136, 248, 0.4);
+    }
+
+    textarea, input {
+      background: #1b1d1f;
+      color: white;
+      border: 1px solid var(--teams-purple);
+      border-radius: 4px;
+      padding: 5px;
+    }
+
+    /* Scrollbar custom para textarea e modal-content */
+    textarea::-webkit-scrollbar,
+    .modal-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    textarea::-webkit-scrollbar-thumb,
+    .modal-content::-webkit-scrollbar-thumb {
+      background: #5a5a5a;
+      border-radius: 4px;
+    }
+
+    textarea:hover::-webkit-scrollbar-thumb,
+    .modal-content:hover::-webkit-scrollbar-thumb {
+      background: #8B88F8;
+    }
+
+    textarea::-webkit-scrollbar-track,
+    .modal-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+   
+    textarea,
+    .modal-content {
+      scrollbar-width: thin;
+      scrollbar-color: #8B88F8 transparent;
+    }
+
+
+    select[multiple] {
+      height: 100px;
+    }
+    /* Dropdown refinado */
+    .dropdown {
+      position: relative;
+      width: 100%;
+      height: 42px;
+      margin-bottom: 12px;
+      background: #1f2124;
+      border: 1px solid #3c3f44;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .dropdown:hover,
+    .dropdown:focus-within {
+      border-color: var(--teams-purple);
+    }
+
+    .dropdown-selected {
+      height: 100%;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      color: white;
+    }
+
+
+    .dropdown-options {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      width: 100%;
+      max-height: 150px;
+      overflow-y: auto;
+      background-color: #2e2f31;
+      border: 1px solid var(--teams-purple);
+      border-radius: 5px;
+      z-index: 10;
+    }
+
+    .dropdown-options label {
+      display: block;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: white;
+    }
+
+    .dropdown-options label:hover {
+      background-color: #3a3b3d;
+    }
+    .dropdown-options::-webkit-scrollbar {
+      width: 6px;
+    }
+    .dropdown-options::-webkit-scrollbar-thumb {
+      background: #5a5a5a;
+      border-radius: 4px;
+    }
+    .dropdown-options:hover::-webkit-scrollbar-thumb {
+      background: #8B88F8;
+    }
+    .dropdown-options::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .dropdown-options {
+      scrollbar-width: thin;
+      scrollbar-color: #8B88F8 transparent;
+    }
+    .label-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 20px 6px 10px; 
+      cursor: pointer;
+      font-size: 14px;
+      color: white;
+      gap: 12px; 
+    }
+
+    .label-option:hover {
+      background-color: #3a3b3d;
+    }
+
+    .label-option .checkmark {
+      color: var(--teams-purple);
+      font-weight: bold;
+    }
+
+    .filter-item {
+      padding: 6px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .filter-item:hover {
+      background-color: #3a3b3d;
+    }
+    
+
+    #filter-labels, #filter-milestones, #filter-assignees {
+      flex: 1;
+      min-width: 200px;
+      max-width: 280px; 
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+
+    #filter-labels::-webkit-scrollbar,
+    #filter-milestones::-webkit-scrollbar,
+    #filter-assignees::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #filter-labels::-webkit-scrollbar-thumb,
+    #filter-milestones::-webkit-scrollbar-thumb,
+    #filter-assignees::-webkit-scrollbar-thumb {
+      background-color: #5a5a5a;
+      border-radius: 4px;
+    }
+
+    #filter-labels:hover::-webkit-scrollbar-thumb,
+    #filter-milestones:hover::-webkit-scrollbar-thumb,
+    #filter-assignees:hover::-webkit-scrollbar-thumb {
+      background-color: var(--teams-purple);
+    }
+
+    .filter-item {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+
+    /* Botão moderno refinado */
+    .modern-save {
+      background: #2d2f33;
+      border: 1px solid #444;
+      color: white;
+      padding: 10px 18px; 
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center; 
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .modern-save i {
+      font-size: 13px;
+    }
+
+    .modern-save:hover {
+      background: #7a74f5; 
+      border-color: #7a74f5;
+    }
+
+    .circle-checkbox {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #aaa;
+      border-radius: 50%;
+      display: inline-block;
+      position: relative;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .circle-checkbox:checked {
+      border-color: var(--teams-purple);
+      background-color: var(--teams-purple);
+    }
+
+    .circle-checkbox:checked::before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: white;
+    }
+
+  </style> 
+</head>
+<body>
+  <div id="edit-modal" style="display: none;" class="modal">
+    <div class="modal-content">
+      <div class="editable-title" id="title-container">
+        <div style="flex-grow: 1; display: flex; align-items: center;">
+          <span id="edit-issue-id" style="color: #aaa; margin-right: 6px;"></span>
+          <span id="edit-title-display" class="title-inline-edit" style="cursor: text;"></span>
+          <input type="text" id="edit-title-input" class="title-inline-edit" style="display: none;" />
+        </div>
+      
+        <div id="toggle-status-container" style="display: flex; align-items: center; gap: 6px;">
+          <span id="status-text" style="font-size: 14px;">Open</span>
+            <button id="toggle-status" style="
+              background: none;
+              border: none;
+              padding: 0;
+              margin: 0;
+              cursor: pointer;
+              font-size: 24px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <i class="fas fa-toggle-on" style="color: #00c853;"></i>
+            </button>
+
+        </div>        
+      </div>           
+
+      <div id="related-merge-requests-section" style="margin-bottom: 8px; display: none;">
+        <label style="font-weight: normal; margin-bottom: 4px;">Related Merge Requests</label>
+        <div id="related-merge-requests" style="display: flex; flex-direction: column; gap: 6px;"></div>
+      </div>            
+  
+      <label for="edit-description">Description</label>
+      <textarea id="edit-description" placeholder="Issue description"></textarea>
+  
+      <div style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+          <label for="edit-assignee">Assignee</label>
+          <select id="edit-assignee">
+            <option disabled selected>Select...</option>
+          </select>
+        </div>
+        <div style="flex: 1;">
+          <label for="edit-due-date">Due Date</label>
+          <input type="date" id="edit-due-date">
+        </div>
+      </div>                
+  
+      <div style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+          <label for="edit-labels-dropdown">Labels</label>
+          <div id="edit-labels-dropdown" class="dropdown">
+            <div id="selected-labels" class="dropdown-selected">Select labels...</div>
+            <div id="labels-options" class="dropdown-options" style="display:none;"></div>
+          </div>
+        </div>
+        <div style="flex: 1;">
+          <label for="edit-milestone">Milestone</label>
+          <select id="edit-milestone">
+            <option disabled selected>Select...</option>
+          </select>
+        </div>
+      </div>      
+  
+      <!-- Alerta para utilizadores sem permissão -->
+      <div id="edit-warning" style="display:none; color: #ff8080; font-size: 14px; margin-bottom: 12px;">
+        Não tem permissões para editar esta issue.
+      </div>
+
+      <div style="display: flex; gap: 20px; margin-top: 10px;">
+        <button id="save-edit" class="modern-save" style="flex: 1;">
+          <i class="fas fa-save"></i> Save changes
+        </button>
+        <a id="open-gitlab" class="modern-save" href="#" target="_blank" style="flex: 1; text-decoration: none; justify-content: center;">
+          <i class="fab fa-gitlab"></i> Open in Gitlab
+        </a>
+      </div>      
+    </div>
+  </div>  
+  <!-- Create Issue-->
+  <div id="create-modal" style="display: none;" class="modal">
+    <div class="modal-content">
+      <div class="editable-title" id="create-title-container">
+        <input type="text" id="create-title-input" class="title-inline-edit" placeholder="Issue title" />
+      </div>
+  
+      <label for="create-description">Description</label>
+      <textarea id="create-description" placeholder="Issue description"></textarea>
+  
+      <div style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+          <label for="create-assignee">Assignee</label>
+          <select id="create-assignee">
+            <option disabled selected>Select...</option>
+          </select>
+        </div>        
+        <div style="flex: 1;">
+          <label for="create-due-date">Due Date</label>
+          <input type="date" id="create-due-date">
+        </div>
+      </div>
+  
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <div style="flex: 1;">
+          <label for="create-labels-dropdown">Labels</label>
+          <div id="create-labels-dropdown" class="dropdown">
+            <div id="create-selected-labels" class="dropdown-selected">Select labels...</div>
+            <div id="create-labels-options" class="dropdown-options" style="display:none;"></div>
+          </div>
+        </div>
+        <div style="flex: 1;">
+          <label for="create-milestone">Milestone</label>
+          <select id="create-milestone">
+            <option disabled selected>Select...</option>
+          </select>
+        </div>
+      </div>
+  
+      <div style="display: flex; gap: 20px; margin-top: 10px;">
+        <button id="save-create" class="modern-save" style="flex: 1;">
+          <i class="fas fa-plus"></i> Create
+        </button>
+        <button id="cancel-create" class="modern-save" style="flex: 1; background-color: #555; border: 1px solid #666;">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="board-header" style="padding: 10px 20px; gap: 10px;">
+    <h2 id="project-title" style="margin-right: 16px; display: none;"></h2>
+  
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <select id="board-selector">
+        <option disabled selected>Select a board...</option>
+      </select>
+  
+      <div style="position: relative;">
+        <button id="filter-icon" style="background: none; border: none; cursor: pointer; padding: 6px;">
+          <i class="fas fa-filter" style="color: #ccc; font-size: 16px;"></i>
+        </button>
+        <div id="label-dropdown" style="
+          display: none;
+          position: absolute;
+          top: 110%;
+          left: 0;
+          width: 820px;
+          background: #2e2f31;
+          border: 1px solid var(--teams-purple);
+          border-radius: 6px;
+          z-index: 100;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+          padding: 20px;
+        ">
+          <div style="display: flex; gap: 20px; justify-content: space-between;">            
+            <div id="filter-labels" style="flex: 1; max-height: 260px; overflow-y: auto;">
+              <strong>Labels</strong>
+              <div id="filter-labels-list"></div>
+            </div>
+            <div id="filter-milestones" style="flex: 1; max-height: 260px; overflow-y: auto;">
+              <strong>Milestones</strong>
+              <div id="filter-milestones-list"></div>
+            </div>
+            <div id="filter-assignees" style="flex: 1; max-height: 260px; overflow-y: auto;">
+              <strong>Assignees</strong>
+              <div id="filter-assignees-list"></div>
+            </div>
+          </div>
+            <div style="margin-top: 20px; text-align: right;">
+              <button id="clear-filters-button" class="modern-save" style="padding: 6px 12px; font-size: 13px;">
+                Clear Filters
+              </button>
+            </div>
+        </div>
+      </div>
+    </div>
+  
+    <button id="create-issue-button" class="modern-save" style="padding: 8px 14px; font-size: 14px;">
+      <i class="fas fa-plus"></i> Create Issue
+    </button>
+  </div>
+  
+  <div class="board" id="board">Select a board to get started...</div>
+                                                                                                                                  
+
+  <script>
+    let teamId, channelId;
+    let userRole = "unknown"; // default
+
+    microsoftTeams.app.initialize().then(() => {
+      microsoftTeams.app.getContext().then(async context => {
+        
+        teamId = context.team?.groupId;
+        channelId = context.channel?.id;
+
+        try {
+          const roleRes = await fetch("/teams/verify-role", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userPrincipalName: context.user?.userPrincipalName }) // 🔥 CORRIGIR AQUI
+          });
+
+          const roleData = await roleRes.json();          
+          userRole = roleData.role || "unknown";          
+        } catch (err) {
+          console.error("[Sprintlab] Erro ao verificar o role via backend:", err);
+        }
+
+        await carregarBoards();                
+      });
+    });
+
+    async function carregarLabelsDropdown() {
+      try {
+        const configRes = await fetch(`/gitlab-issues/project-config?teamId=${teamId}&channelId=${channelId}`);
+        const config = await configRes.json();
+
+        const metaRes = await fetch(`/gitlab-issues/project-metadata?teamId=${teamId}&channelId=${channelId}`);
+        const { labels, milestones, assignees } = await metaRes.json();
+
+        //  Renderiza os títulos e contentores internos
+        document.getElementById("filter-labels").innerHTML = `
+          <strong style="display: block; margin-bottom: 4px;">Labels</strong>
+          <div id="filter-labels-list" style="display: flex; flex-direction: column; gap: 4px;"></div>
+        `;
+        document.getElementById("filter-milestones").innerHTML = `
+          <strong style="display: block; margin-bottom: 4px;">Milestones</strong>
+          <div id="filter-milestones-list" style="display: flex; flex-direction: column; gap: 4px;"></div>
+        `;
+        document.getElementById("filter-assignees").innerHTML = `
+          <strong style="display: block; margin-bottom: 4px;">Assignees</strong>
+          <div id="filter-assignees-list" style="display: flex; flex-direction: column; gap: 4px;"></div>
+        `;
+
+        const labelsDiv = document.getElementById("filter-labels-list");
+        const milestonesDiv = document.getElementById("filter-milestones-list");
+        const assigneesDiv = document.getElementById("filter-assignees-list");
+
+        const selectedFilters = new Set();
+
+        // Checkbox comum
+        function createCheckbox(value, onChangeCallback) {
+          const wrapper = document.createElement("label");
+          wrapper.style.display = "flex";
+          wrapper.style.justifyContent = "space-between";
+          wrapper.style.alignItems = "center";
+          wrapper.style.fontSize = "14px";
+          wrapper.style.color = "white";
+          wrapper.style.paddingRight = "6px"; // espaço extra para afastar do scroll
+
+          const span = document.createElement("span");
+          span.textContent = value;
+
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.className = "circle-checkbox";
+          input.dataset.value = value;
+          input.checked = selectedFilters.has(value);
+
+          input.addEventListener("change", () => {
+            if (input.checked) {
+              selectedFilters.add(value);
+            } else {
+              selectedFilters.delete(value);
+            }
+            aplicarFiltrosSelecionados();
+          });
+
+          wrapper.appendChild(span);
+          wrapper.appendChild(input);
+          return wrapper;
+        }
+
+        function aplicarFiltrosSelecionados() {
+          const allCards = document.querySelectorAll(".issue");
+
+          allCards.forEach(card => {
+            const cardLabels = JSON.parse(card.dataset.issueLabels || "[]").map(l => l.toLowerCase());
+            const cardText = card.querySelector(".meta")?.textContent.toLowerCase() || "";
+
+            const match = Array.from(selectedFilters).every(filtro => {
+              const f = filtro.toLowerCase();
+              return cardLabels.includes(f) || cardText.includes(f);
+            });
+
+            card.style.display = match ? "block" : "none";
+          });
+        }
+
+        labels.forEach(label => {
+          const checkbox = createCheckbox(label.name, aplicarFiltrosSelecionados);
+          labelsDiv.appendChild(checkbox);
+        });
+
+        milestones.forEach(ms => {
+          const checkbox = createCheckbox(ms.title, aplicarFiltrosSelecionados);
+          milestonesDiv.appendChild(checkbox);
+        });
+
+        assignees.forEach(user => {
+          const checkbox = createCheckbox(user.name, aplicarFiltrosSelecionados);
+          assigneesDiv.appendChild(checkbox);
+        });
+
+        document.getElementById("clear-filters-button").addEventListener("click", () => {
+          selectedFilters.clear();
+
+          document.querySelectorAll(".circle-checkbox").forEach(cb => {
+            cb.checked = false;
+          });
+
+          // Mostra todos os cartões
+          document.querySelectorAll(".issue").forEach(card => {
+            card.style.display = "block";
+          });
+        });
+      } catch (err) {
+        console.error("Erro ao carregar filtros:", err);
+      }
+    }
+
+
+
+
+    const storageKey = `lastBoard_${teamId}_${channelId}`;
+
+    async function carregarBoards() {
+      const selector = document.getElementById("board-selector");
+      selector.disabled = true;
+
+      try {
+        const res = await fetch(`/gitlab-issues/boards?teamId=${teamId}&channelId=${channelId}`);
+        const boards = await res.json();
+
+        selector.innerHTML = `<option disabled selected>Escolha uma board...</option>`;
+        boards.forEach(board => {
+          const option = document.createElement("option");
+          option.value = board.id;
+          option.textContent = board.name || `Board #${board.id}`;
+          selector.appendChild(option);
+        });
+
+        selector.disabled = false;
+        selector.addEventListener("change", (e) => {
+          const selectedBoardId = e.target.value;
+          localStorage.setItem(storageKey, selectedBoardId); 
+          carregarIssues(selectedBoardId);
+        });
+
+        // 🔸 Tenta carregar a última usada
+        const lastUsedBoardId = localStorage.getItem(storageKey);
+        if (lastUsedBoardId && boards.some(b => b.id == lastUsedBoardId)) {
+          selector.value = lastUsedBoardId;
+          carregarIssues(lastUsedBoardId);
+        }
+
+      } catch (err) {
+        document.getElementById("board").innerHTML = `<p style="color:#ff8080;">Erro ao buscar boards: ${err.message}</p>`;
+        console.error("Erro ao carregar boards:", err);
+      }
+    }
+    async function carregarLabels() {
+      try {
+        const configRes = await fetch(`/gitlab-issues/project-config?teamId=${teamId}&channelId=${channelId}`);
+        const config = await configRes.json();
+
+        const labelsRes = await fetch(`/gitlab-issues/labels?projectId=${config.gitlab_project_id}&token=${config.gitlab_token}`);
+        const labels = await labelsRes.json();
+
+        const labelFilter = document.getElementById("label-filter");
+        labelFilter.innerHTML = `<option value="">Filtrar por label</option>`;
+        labels.forEach(label => {
+          const opt = document.createElement("option");
+          opt.value = label.name;
+          opt.textContent = label.name;
+          labelFilter.appendChild(opt);
+        });
+
+        labelFilter.addEventListener("change", () => {
+          const selectedLabel = labelFilter.value;
+          filtrarIssuesPorLabel(selectedLabel);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar labels para filtro:", err);
+      }
+    }
+
+    async function carregarIssues(boardId) {
+      const board = document.getElementById("board");
+      const title = document.getElementById("project-title");
+      board.innerHTML = "Loading...";
+
+      try {
+        const res = await fetch(`/gitlab-issues?teamId=${teamId}&channelId=${channelId}&boardId=${boardId}`);
+        const data = await res.json();
+
+        if (data.error) {
+          board.innerHTML = `<p style="color:#ff8080;">Erro: ${data.error}</p>`;
+          return;
+        }
+
+        
+        board.innerHTML = "";
+
+        for (const [columnName, issues] of Object.entries(data.board)) {
+          const col = document.createElement("div");
+          col.className = "column";
+          col.innerHTML = `<h3>${columnName}</h3>`;
+
+          const content = document.createElement("div");
+          content.className = "column-content";
+
+          issues.forEach(issue => {
+            const card = document.createElement("div");
+            card.className = "issue";
+            card.innerHTML = `
+              <h4>#${issue.iid}: ${issue.title}</h4>
+              <p>${issue.description || "<em>Sem descrição</em>"}</p>
+              <p class="meta">
+                👤 <strong>${issue.assignee?.name || "Não atribuído"}</strong><br>
+                📅 ${issue.due_date || "Sem data"}<br>
+                🏁 ${issue.milestone?.title || "Nenhuma"}
+              </p>
+              <div>
+                ${issue.labels.map(l => {
+                  const color = data.label_colors?.[l] || "#8B88F8";
+                  return `<span class="label" style="background-color: ${color};">${l}</span>`;
+                }).join("")}
+              </div>
+            `;
+            async function carregarMetadadosProjeto() {
+              const res = await fetch(`/gitlab-issues/project-metadata?teamId=${teamId}&channelId=${channelId}`);
+              const { assignees, labels, milestones } = await res.json();
+
+              const assigneeSelect = document.getElementById("edit-assignee");
+              assigneeSelect.innerHTML = `<option value="">Select...</option>`;
+              assignees.forEach(user => {
+                const opt = document.createElement("option");
+                opt.value = user.id;
+                opt.textContent = user.name;
+                assigneeSelect.appendChild(opt);
+              });
+
+              const labelsContainer = document.getElementById("labels-options");
+              labelsContainer.innerHTML = "";
+              labels.forEach(label => {
+                const isSelected = issue.labels.includes(label.name);
+                
+                const option = document.createElement("div");
+                option.className = "label-option";
+                if (isSelected) option.classList.add("selected");
+                option.dataset.value = label.name;
+                option.innerHTML = `
+                  <span>${label.name}</span>
+                  <span class="checkmark" style="display: ${isSelected ? 'inline' : 'none'};">✓</span>
+                `;
+
+                option.addEventListener("click", () => {
+                  option.classList.toggle("selected");
+                  const checked = option.classList.contains("selected");
+                  option.querySelector(".checkmark").style.display = checked ? "inline" : "none";
+
+                  const selected = Array.from(labelsContainer.querySelectorAll(".label-option.selected"))
+                                        .map(i => i.dataset.value);
+                  document.getElementById("selected-labels").textContent = selected.length
+                    ? `${selected.length} label${selected.length > 1 ? "s" : ""}`
+                    : "Select labels...";
+                });
+
+                labelsContainer.appendChild(option);
+              });
+              
+              const selected = labels.filter(l => issue.labels.includes(l.name));
+              document.getElementById("selected-labels").textContent = selected.length
+                ? `${selected.length} label${selected.length > 1 ? "s" : ""}`
+                : "Select labels...";
+
+              labelsContainer.addEventListener("change", () => {
+              const selected = Array.from(labelsContainer.querySelectorAll("input:checked"))
+                                    .map(i => i.value);
+              document.getElementById("selected-labels").textContent = selected.length
+                ? `${selected.length} label${selected.length > 1 ? "s" : ""}`
+                : "Select labels...";
+              });
+              const milestoneSelect = document.getElementById("edit-milestone");
+              milestoneSelect.innerHTML = `<option value="">Select...</option>`;
+              milestones.forEach(m => {
+                const opt = document.createElement("option");
+                opt.value = m.id;
+                opt.textContent = m.title;
+                milestoneSelect.appendChild(opt);
+              });
+
+              return { assignees, labels, milestones };
+            }
+
+            async function preencherCamposEdit(issue, projectId, token) {
+              // Campos já preenchidos
+              document.getElementById("edit-title").value = issue.title;
+              document.getElementById("edit-description").value = issue.description || "";              
+              document.getElementById("edit-due-date").value = issue.due_date || "";
+
+              // Obter dados adicionais
+              const [users, labels, milestones] = await Promise.all([
+                fetch(`/gitlab-issues/users?projectId=${projectId}&token=${token}`).then(r => r.json()),
+                fetch(`/gitlab-issues/labels?projectId=${projectId}&token=${token}`).then(r => r.json()),
+                fetch(`/gitlab-issues/milestones?projectId=${projectId}&token=${token}`).then(r => r.json())
+              ]);
+
+              // Assignee
+              const assigneeSelect = document.getElementById("edit-assignee");
+              assigneeSelect.innerHTML = `<option disabled>Select...</option>`;
+              users.forEach(user => {
+                const opt = document.createElement("option");
+                opt.value = user.id;
+                opt.textContent = user.name;
+                if (issue.assignee?.id === user.id) opt.selected = true;
+                assigneeSelect.appendChild(opt);
+              });
+
+              // Labels
+              const labelsSelect = document.getElementById("edit-labels");
+              labelsSelect.innerHTML = "";
+              labels.forEach(label => {
+                const opt = document.createElement("option");
+                opt.value = label.name;
+                opt.textContent = label.name;
+                if (issue.labels.includes(label.name)) opt.selected = true;
+                labelsSelect.appendChild(opt);
+              });
+
+              // Milestones
+              const milestoneSelect = document.getElementById("edit-milestone");
+              milestoneSelect.innerHTML = `<option disabled>Select...</option>`;
+              milestones.forEach(ms => {
+                const opt = document.createElement("option");
+                opt.value = ms.id;
+                opt.textContent = ms.title;
+                if (issue.milestone?.id === ms.id) opt.selected = true;
+                milestoneSelect.appendChild(opt);
+              });
+            }
+            card.addEventListener("click", async () => {
+              document.getElementById("edit-modal").style.display = "flex";
+              document.getElementById("edit-issue-id").textContent = `#${issue.iid}:`;
+              document.getElementById("edit-title-display").textContent = issue.title;
+              document.getElementById("edit-title-input").value = issue.title;
+              await carregarRelatedMergeRequests(issue.iid);
+              document.getElementById("edit-description").value = issue.description || "";            
+              document.getElementById("edit-due-date").value = issue.due_date || "";
+              await carregarMetadadosProjeto();
+              document.getElementById("edit-assignee").value = issue.assignee?.id || "";
+              document.getElementById("edit-milestone").value = issue.milestone?.id || "";
+              document.getElementById("selected-labels").textContent =
+                issue.labels.length ? `${issue.labels.length} label${issue.labels.length > 1 ? "s" : ""}` : "Select labels...";
+              const modal = document.getElementById("edit-modal");
+              modal.style.display = "flex";
+
+              
+
+              
+              const saveBtn = document.getElementById("save-edit");
+              const warning = document.getElementById("edit-warning");
+
+              if (userRole.toLowerCase() === "member") {
+                saveBtn.style.display = "none";
+                warning.style.display = "block";
+              } else {
+                saveBtn.style.display = "inline-flex";
+                warning.style.display = "none";
+              }      
+
+              modal.dataset.issueIid = issue.iid;
+              modal.dataset.projectId = data.project_id;
+
+              modal.dataset.projectWebUrl = data.project_web_url; 
+              const openGitlabBtn = document.getElementById("open-gitlab");
+              openGitlabBtn.href = `${data.project_web_url}/-/issues/${issue.iid}`;
+
+              modal.dataset.currentState = issue.state;                          
+
+              atualizarBotaoEstadoModal(issue.state);
+
+              const titleDisplay = document.getElementById("edit-title-display");
+              const titleInput = document.getElementById("edit-title-input");
+
+              titleDisplay.addEventListener("click", () => {
+                titleInput.value = titleDisplay.textContent;
+                titleDisplay.style.display = "none";
+                titleInput.style.display = "inline";
+                titleInput.focus();
+              });
+
+              titleInput.addEventListener("blur", () => {
+                titleDisplay.textContent = titleInput.value;
+                titleInput.style.display = "none";
+                titleDisplay.style.display = "inline";
+              });
+            });
+            card.draggable = true;
+            card.dataset.issueIid = issue.iid;
+            card.dataset.issueLabels = JSON.stringify(issue.labels);
+            card.dataset.issueState = issue.state;
+            card.setAttribute("draggable", "true");
+            content.appendChild(card);
+          });
+
+          col.appendChild(content);
+          board.appendChild(col);
+        }
+        // Drag & Drop
+        document.querySelectorAll('.issue').forEach(issue => {
+          issue.addEventListener('dragstart', e => {
+            e.dataTransfer.setData("text/plain", e.target.dataset.issueIid);
+          });
+        });
+
+        document.querySelectorAll('.column-content').forEach(col => {
+          col.addEventListener('dragover', e => e.preventDefault());
+          col.addEventListener('drop', async e => {
+            e.preventDefault();
+            const issueIid = e.dataTransfer.getData("text/plain");
+            const card = document.querySelector(`.issue[data-issue-iid='${issueIid}']`);
+            const targetColumn = col.closest('.column');
+            const targetTitle = targetColumn.querySelector("h3").textContent.trim();
+            const issueLabels = JSON.parse(card.dataset.issueLabels);
+            const issueState = card.dataset.issueState;
+            const boardId = document.getElementById("board-selector").value;
+
+            // Decide labels e estado
+            const res = await fetch(`/gitlab-issues?teamId=${teamId}&channelId=${channelId}&boardId=${boardId}`);
+            const data = await res.json();
+            const labelLists = Object.keys(data.board).filter(name => name !== "Open" && name !== "Closed");
+            const lowerLabelLists = labelLists.map(l => l.toLowerCase());
+
+            let newLabels = [...issueLabels];
+            let newState = "opened";
+
+            if (targetTitle === "Closed") {
+              newState = "closed";
+            } else {
+              newLabels = newLabels.filter(label => !lowerLabelLists.includes(label.toLowerCase()));
+              if (!newLabels.map(l => l.toLowerCase()).includes(targetTitle.toLowerCase())) {
+                newLabels.push(targetTitle);
+              }
+            }
+
+            
+            card.dataset.issueState = newState; 
+            console.error("NOVO STATE:", newState);
+            
+            if (document.getElementById("edit-modal").style.display === "flex" && document.getElementById("edit-modal").dataset.issueIid == issueIid) {
+                atualizarBotaoEstadoModal(newState);
+            }
+
+            col.appendChild(card);
+
+            fetch(`/gitlab-issues/${issueIid}?teamId=${teamId}&channelId=${channelId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                labels: newLabels,
+                state_event: newState === "closed" ? "close" : "reopen"              
+              })            
+            })            
+            .then(async () => {
+              await atualizarCard(issueIid);
+            })
+            .catch(err => {
+              console.error("❌ Erro ao atualizar no GitLab:", err);
+              alert("Erro ao atualizar no GitLab");
+            });
+          });
+        });
+      } catch (err) {
+        board.innerHTML = `<p style="color:#ff8080;">Erro ao carregar issues: ${err.message}</p>`;
+        console.error("Erro ao carregar issues:", err);
+      }
+    }
+        // Drag & Drop
+    document.querySelectorAll('.issue').forEach(issue => {
+      issue.addEventListener('dragstart', e => {
+        e.dataTransfer.setData("text/plain", e.target.dataset.issueIid);
+      });
+    });
+
+    document.getElementById("save-edit").addEventListener("click", async () => {
+      const title = document.getElementById("edit-title-input").value;
+      const description = document.getElementById("edit-description").value;      
+      const due_date = document.getElementById("edit-due-date").value;
+      const issueIid = document.getElementById("edit-modal").dataset.issueIid;
+      const projectId = document.getElementById("edit-modal").dataset.projectId;
+      const assignee_id = document.getElementById("edit-assignee").value || null;
+      const labelValues = Array.from(document.querySelectorAll(".label-option.selected"))
+        .map(opt => opt.dataset.value);
+      const milestone_id = document.getElementById("edit-milestone").value || null;
+      
+      const state = document.getElementById("toggle-status")?.dataset.state || "opened"; // pega o estado atual
+
+      try {
+        console.log({
+          title, description, due_date, assignee_id, labelValues, milestone_id, state
+        });
+
+        const res = await fetch(`/gitlab-issues/${issueIid}?teamId=${teamId}&channelId=${channelId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            description,            
+            due_date,
+            assignee_id: assignee_id ? Number(assignee_id) : null,
+            labels: labelValues,
+            milestone_id: milestone_id ? Number(milestone_id) : null,
+            state_event: state === "closed" ? "close" : "reopen" 
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert("✅ Issue atualizada com sucesso!");
+          document.getElementById("edit-modal").style.display = "none";
+          const boardId = document.getElementById("board-selector").value;
+          await atualizarCard(issueIid);
+        } else {
+          alert("Erro ao atualizar issue: " + data.error);
+        }
+      } catch (err) {
+        console.error("❌ Erro ao guardar edição:", err);
+        alert("Erro ao atualizar issue.");
+      }
+    });
+
+    // Apenas muda visualmente (sem chamar backend)
+    document.getElementById("toggle-status").addEventListener("click", () => {
+      const button = document.getElementById("toggle-status");
+      const current = button.dataset.state || "opened";
+      const next = current === "opened" ? "closed" : "opened";
+      atualizarBotaoEstadoModal(next); // muda visualmente
+    });
+
+    // Atualiza o botão quando abrir o modal
+    function atualizarBotaoEstadoModal(state) {
+      const button = document.getElementById("toggle-status");
+      const icon = button.querySelector("i");
+      const text = document.getElementById("status-text");
+
+      if (state === "closed") {
+        text.textContent = "Closed";
+        icon.className = "fas fa-toggle-off";
+        icon.style.color = "#d50000"; 
+        button.dataset.state = "closed";
+      } else {
+        text.textContent = "Open";
+        icon.className = "fas fa-toggle-on";
+        icon.style.color = "#00c853"; 
+        button.dataset.state = "opened";
+      }
+    }
+
+    // Fecha modal ao clicar fora da caixa
+    window.addEventListener("click", (e) => {
+      const modal = document.getElementById("edit-modal");
+      if (e.target === modal) {
+        modal.style.display = "none";
+        issueCard.classList.remove("selected-issue");
+      }
+    });
+    document.getElementById("selected-labels").addEventListener("click", () => {
+      const options = document.getElementById("labels-options");
+      options.style.display = options.style.display === "none" ? "block" : "none";
+    });
+
+    window.addEventListener("click", (e) => {
+      if (!document.getElementById("edit-labels-dropdown").contains(e.target)) {
+        document.getElementById("labels-options").style.display = "none";
+      }
+    });
+    
+    async function atualizarCard(issueIid) {
+      try {
+        const res = await fetch(`/gitlab-issues/${issueIid}?teamId=${teamId}&channelId=${channelId}`);
+        const issue = await res.json();
+
+        // Obter dados de configuração e cores das labels
+        const configRes = await fetch(`/gitlab-issues/project-config?teamId=${teamId}&channelId=${channelId}`);
+        const config = await configRes.json();
+        const labelColorsRes = await fetch(`/gitlab-issues/labels?projectId=${config.gitlab_project_id}&token=${config.gitlab_token}`);
+        const labels = await labelColorsRes.json();
+        const label_colors = Object.fromEntries(labels.map(l => [l.name, l.color || "#8B88F8"]));
+
+        // Substituir o cartão visualmente
+        const oldCard = document.querySelector(`.issue[data-issue-iid="${issueIid}"]`);
+        if (!oldCard) return;
+
+        const newCard = document.createElement("div");
+        newCard.className = "issue";
+        newCard.dataset.issueIid = issue.iid;
+        newCard.dataset.issueLabels = JSON.stringify(issue.labels);
+        newCard.dataset.issueState = issue.state;
+        newCard.draggable = true;
+
+        newCard.innerHTML = `
+          <h4>#${issue.iid}: ${issue.title}</h4>
+          <p>${issue.description || "<em>Sem descrição</em>"}</p>
+          <p class="meta">
+            👤 <strong>${issue.assignee?.name || "Não atribuído"}</strong><br>
+            📅 ${issue.due_date || "Sem data"}<br>
+            🏁 ${issue.milestone?.title || "Nenhuma"}
+          </p>
+          <div>
+            ${issue.labels.map(l => {
+              const color = label_colors[l] || "#8B88F8";
+              return `<span class="label" style="background-color: ${color};">${l}</span>`;
+            }).join("")}
+          </div>
+        `;
+
+        // Clique para editar
+        newCard.addEventListener('click', () => {
+          document.getElementById("edit-issue-id").textContent = `#${issue.iid}:`;
+          document.getElementById("edit-title-display").textContent = issue.title;
+          document.getElementById("edit-title-input").value = issue.title;
+          document.getElementById("edit-description").value = issue.description || "";          
+          document.getElementById("edit-due-date").value = issue.due_date || "";
+          document.getElementById("edit-modal").style.display = "flex";
+          document.getElementById("edit-modal").dataset.issueIid = issue.iid;
+          document.getElementById("edit-modal").dataset.projectId = config.gitlab_project_id;
+          atualizarBotaoEstadoModal(issue.state);
+        });
+
+        // Drag
+        newCard.addEventListener('dragstart', e => {
+          e.dataTransfer.setData("text/plain", issue.iid);
+        });
+
+        // Remover o cartão antigo
+        oldCard.remove();
+
+        // Inserir o novo cartão na coluna certa com base nas labels
+        const lowerLabels = issue.labels.map(l => l.toLowerCase());
+        const colunaDestino = Array.from(document.querySelectorAll(".column")).find(col => {
+          const colName = col.querySelector("h3")?.textContent.trim().toLowerCase();
+          return lowerLabels.includes(colName);
+        });
+
+        if (colunaDestino) {
+          colunaDestino.querySelector(".column-content").appendChild(newCard);
+        }
+
+      } catch (err) {
+        console.error("Erro ao atualizar card:", err);
+      }
+    }
+
+    async function carregarRelatedMergeRequests(issueIid) {
+      const container = document.getElementById("related-merge-requests");
+      container.innerHTML = "Loading...";
+
+      try {
+        const res = await fetch(`/gitlab-issues/${issueIid}/related_merge_requests?teamId=${teamId}&channelId=${channelId}`);
+        const mrs = await res.json();
+
+        container.innerHTML = "";
+
+        document.getElementById("related-merge-requests-section").style.display = "block";
+
+        const projectWebUrl = document.getElementById("edit-modal").dataset.projectWebUrl;
+
+        if (mrs.length === 0) {
+          const noMr = document.createElement("div");
+          noMr.textContent = "No Related Merge Requests";
+          noMr.style.color = "#bbb";
+          noMr.style.fontSize = "14px";
+          container.appendChild(noMr);
+          return;
+        }
+
+        mrs.forEach(mr => {
+          const mrDiv = document.createElement("div");
+          mrDiv.style.display = "flex";
+          mrDiv.style.alignItems = "center";
+          mrDiv.style.gap = "8px";
+          mrDiv.style.fontSize = "14px";
+          mrDiv.innerHTML = `
+            <a href="${projectWebUrl}/-/merge_requests/${mr.iid}" target="_blank" style="color: var(--teams-purple); font-weight: bold; text-decoration: underline;">#${mr.iid}</a>
+            <span>${mr.title}</span>
+            <span style="
+              background: #555;
+              padding: 2px 6px;
+              border-radius: 6px;
+              font-size: 12px;
+              color: white;
+            ">${mr.state}</span>
+          `;
+          container.appendChild(mrDiv);
+        });
+
+      } catch (err) {
+        console.error("Erro ao buscar MRs relacionados:", err);
+        container.innerHTML = "Erro ao carregar MRs.";
+      }
+    }
+
+    function filtrarIssuesPorLabel(name, isChecked) {
+      const cards = document.querySelectorAll(".issue");
+      cards.forEach(card => {
+        const labels = JSON.parse(card.dataset.issueLabels);
+        const match = labels.includes(name);
+        if (isChecked && !match) card.style.display = "none";
+        if (!isChecked) card.style.display = "";
+      });
+    }
+
+    function filtrarIssuesPorMilestone(name, isChecked) {
+      const cards = document.querySelectorAll(".issue");
+      cards.forEach(card => {
+        const milestone = card.querySelector(".meta")?.textContent.includes(name);
+        if (isChecked && !milestone) card.style.display = "none";
+        if (!isChecked) card.style.display = "";
+      });
+    }
+
+    function filtrarIssuesPorAssignee(name, isChecked) {
+      const cards = document.querySelectorAll(".issue");
+      cards.forEach(card => {
+        const assignee = card.querySelector(".meta")?.textContent.includes(name);
+        if (isChecked && !assignee) card.style.display = "none";
+        if (!isChecked) card.style.display = "";
+      });
+    }
+
+    document.getElementById("filter-icon").addEventListener("click", async () => {
+      const dropdown = document.getElementById("label-dropdown");
+      if (dropdown.style.display === "block") {
+        dropdown.style.display = "none";
+      } else {
+        await carregarLabelsDropdown();  
+        dropdown.style.display = "block";
+      }
+    });
+
+    document.getElementById("create-issue-button").addEventListener("click", async () => {
+      const modal = document.getElementById("create-modal");
+      modal.style.display = "flex";
+
+      await carregarMetadadosCreate();
+
+      // Limpa campos
+      document.getElementById("create-title-input").value = "";
+      document.getElementById("create-description").value = "";
+      document.getElementById("create-start-date").value = "";
+      document.getElementById("create-due-date").value = "";
+
+    });
+
+    // Preencher assignees, labels e milestones para CREATE
+    async function carregarMetadadosCreate() {
+      try {
+        const res = await fetch(`/gitlab-issues/project-metadata?teamId=${teamId}&channelId=${channelId}`);
+        const { assignees, labels, milestones } = await res.json();
+
+        // Assignees
+        const assigneeSelect = document.getElementById("create-assignee");
+        assigneeSelect.innerHTML = `<option disabled selected>Select...</option>`;
+        assignees.forEach(user => {
+          const opt = document.createElement("option");
+          opt.value = user.id;
+          opt.textContent = user.name;
+          assigneeSelect.appendChild(opt);
+        });
+
+        // Labels
+        const labelsContainer = document.getElementById("create-labels-options");
+        labelsContainer.innerHTML = "";
+        labels.forEach(label => {
+          const option = document.createElement("div");
+          option.className = "label-option";
+          option.dataset.value = label.name;
+          option.innerHTML = `
+            <span>${label.name}</span>
+            <span class="checkmark" style="display: none;">✓</span>
+          `;
+
+          option.addEventListener("click", () => {
+            option.classList.toggle("selected");
+            const checked = option.classList.contains("selected");
+            option.querySelector(".checkmark").style.display = checked ? "inline" : "none";
+
+            const selected = Array.from(labelsContainer.querySelectorAll(".label-option.selected"))
+                                  .map(i => i.dataset.value);
+            document.getElementById("create-selected-labels").textContent = selected.length
+              ? `${selected.length} label${selected.length > 1 ? "s" : ""}`
+              : "Select labels...";
+          });
+
+          labelsContainer.appendChild(option);
+        });
+
+        // Milestones
+        const milestoneSelect = document.getElementById("create-milestone");
+        milestoneSelect.innerHTML = `<option disabled selected>Select...</option>`;
+        milestones.forEach(m => {
+          const opt = document.createElement("option");
+          opt.value = m.id;
+          opt.textContent = m.title;
+          milestoneSelect.appendChild(opt);
+        });
+
+      } catch (err) {
+        console.error("Erro ao carregar dados para criação:", err);
+      }
+    }
+
+    document.getElementById("create-selected-labels").addEventListener("click", () => {
+      const options = document.getElementById("create-labels-options");
+      options.style.display = options.style.display === "none" ? "block" : "none";
+    });
+
+    window.addEventListener("click", (e) => {
+      if (!document.getElementById("create-labels-dropdown").contains(e.target)) {
+        document.getElementById("create-labels-options").style.display = "none";
+      }
+    });
+
+
+    // Botão Cancelar
+    document.getElementById("cancel-create").addEventListener("click", () => {
+      document.getElementById("create-modal").style.display = "none";
+    });
+
+    // Botão Create
+    document.getElementById("save-create").addEventListener("click", async () => {
+      const title = document.getElementById("create-title-input").value.trim();
+      const description = document.getElementById("create-description").value.trim();      
+      const due_date = document.getElementById("create-due-date").value || null;
+      const assignee_id = document.getElementById("create-assignee").value || null;
+      const milestone_id = document.getElementById("create-milestone").value || null;
+      const selectedLabels = Array.from(document.querySelectorAll("#create-labels-options .label-option.selected"))
+                                  .map(opt => opt.dataset.value);
+
+      const selectedBoardName = document.querySelector("#board-selector").selectedOptions[0]?.textContent.trim();
+      if (selectedBoardName && !selectedLabels.includes(selectedBoardName)) {
+        selectedLabels.push(selectedBoardName);
+      }
+
+      if (!title) {
+        alert("O título é obrigatório!");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/gitlab-issues?teamId=${teamId}&channelId=${channelId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            description,            
+            due_date,
+            assignee_id: assignee_id ? Number(assignee_id) : null,
+            milestone_id: milestone_id ? Number(milestone_id) : null,
+            labels: selectedLabels
+          })
+        });
+
+        if (res.ok) {
+          alert("Issue criada com sucesso!");
+          document.getElementById("create-modal").style.display = "none";
+          const boardId = document.getElementById("board-selector").value;
+          await carregarIssues(boardId);
+        } else {
+          const data = await res.json();
+          alert("Erro ao criar issue: " + data.error);
+        }
+      } catch (err) {
+        console.error("Erro ao criar issue:", err);
+        alert("Erro ao criar issue.");
+      }
+    });
+
+  </script>
+</body>
+</html>

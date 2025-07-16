@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Sprintlab - Main</title>
+  <script src="https://res.cdn.office.net/teams-js/2.12.0/js/MicrosoftTeams.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    :root {
+      --teams-purple: #8B88F8;
+    }
+
+    html, body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1b1d1f;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden; 
+    }
+
+    .tab-bar {
+      display: flex;
+      border-bottom: 2px solid #333;
+      background-color: #252526;
+      height: 50px;
+      box-sizing: border-box;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 15px;
+      cursor: pointer;
+      color: #ccc;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tab.active {
+      color: var(--teams-purple);
+      border-color: var(--teams-purple);
+    }
+
+    iframe {
+      width: 100%;
+      height: calc(100% - 50px); 
+      border: none;
+      background-color: #1b1d1f;
+      display: block;
+      overflow: hidden;
+    }
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #252526;
+      height: 50px;
+      padding: 0 20px;
+      border-bottom: 2px solid #333;
+    }
+
+    .project-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tab-bar {
+      display: flex;
+      height: 100%;
+    }
+
+    .tab {
+      padding: 0 16px;
+      display: flex;
+      align-items: center;              
+      justify-content: center;   
+      height: 100%;              
+      cursor: pointer;
+      color: #ccc;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .tab.active {
+      color: var(--teams-purple);
+      border-color: var(--teams-purple);
+    }
+    .left-group {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      height: 100%;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="left-group">
+      <div class="project-name" id="project-name">...</div>
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('board')">
+          <i class="fas fa-table-columns"></i><span style="margin-left: 6px;">Board</span>
+        </div>
+        <div class="tab" onclick="switchTab('dashboard')">
+          <i class="fas fa-chart-line"></i><span style="margin-left: 6px;">Dashboard</span>
+        </div>
+      </div>
+    </div>
+  </div>  
+  
+  <iframe id="tab-frame" src="board.html"></iframe>
+
+  <script>
+    microsoftTeams.app.initialize().then(() => {
+      microsoftTeams.app.getContext().then(async context => {
+        const teamId = context.team.groupId;
+        const channelId = context.channel.id;
+
+        try {
+          const configRes = await fetch(`/gitlab-issues/project-config?teamId=${teamId}&channelId=${channelId}`);
+          const config = await configRes.json();
+
+          if (!config.gitlab_project_id || !config.gitlab_token || !config.gitlab_host) {
+            document.getElementById("project-name").textContent = "Projeto não configurado";
+            return;
+          }
+
+          const baseUrl = `https://${config.gitlab_host}`;
+
+          const gitlabRes = await fetch(`${baseUrl}/api/v4/projects/${config.gitlab_project_id}`, {
+            headers: { "Private-Token": config.gitlab_token }
+          });
+
+          if (!gitlabRes.ok) {
+            throw new Error("Erro ao buscar projeto do GitLab");
+          }
+
+          const projectData = await gitlabRes.json();
+          document.getElementById("project-name").textContent = projectData.name || "Projeto sem nome";
+
+        } catch (error) {
+          console.error("Erro ao buscar nome do projeto:", error);
+          document.getElementById("project-name").textContent = "Erro ao carregar projeto";
+        }
+      });
+    });
+
+    function switchTab(tab) {
+      const iframe = document.getElementById("tab-frame");
+      const tabs = document.querySelectorAll(".tab");
+
+      tabs.forEach(t => t.classList.remove("active"));
+
+      if (tab === "board") {
+        iframe.src = "board.html";
+        tabs[0].classList.add("active");
+      } else if (tab === "dashboard") {
+        iframe.src = "dashboard.html";
+        tabs[1].classList.add("active");
+      }
+    }
+  </script>
+</body>
+</html>
