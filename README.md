@@ -5,10 +5,7 @@ It allows you to view, create, and edit issues directly within Teams, while also
 
 ---
 
-## ⚙️ Configuration Instructions
-
-> **Important Note:**  
-> Due to Microsoft Lusófona’s security policies, SprintLab can only be configured within the following Teams workspace:
+## ⚙️ Configuration 
 
 🔗 **SprintLab Demo Team in Microsoft Teams**
 
